@@ -1,6 +1,6 @@
 # imfx
 
-**imfx** is a lightweight shader-driven animated texture framework designed as an addon for **Dear ImGui** It allows you to feed pixel shaders from strings, files, or raw byte blobs into a global context, modulate parameters in real-time, and bake them into standard textures (`ImTextureID`) for immediate rendering within your ImGui UI layouts
+**imfx** is a lightweight shader-driven animated texture framework designed as an addon for **[Dear ImGui](https://github.com/ocornut/imgui)** It allows you to feed pixel shaders from strings, files, or raw byte blobs into a global context, modulate parameters in real-time, and bake them into standard textures (`ImTextureID`) for immediate rendering within your ImGui UI layouts
 
 > **Note:** This is just a fun little side project I put together with the help of Claude 4.6 Sonnet. I'm mainly just throwing it up here to share with the community, so feel free to play around with it!
 
