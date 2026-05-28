@@ -19,6 +19,12 @@ Co-authored by **[Averta047](https://github.com/Averta047)** and **Claude 4.6 So
 * **Shaders depend on the renderer language** Even though the main context system does not care about your graphics API, the shader code you pass to it does (controlled by the `ImFXShaderLang` enum) If you switch rendering backends, you have to update your shader code language accordingly
 * **Only DirectX 11 / HLSL supported for now** Because this was built as a quick side project, I didn't bother adding support for other renderer backends or shader languages yet
 
+## Showcase
+
+https://github.com/user-attachments/assets/0936f231-716c-4d7a-85f2-9a20ef0d3762
+
+https://github.com/user-attachments/assets/9d9b697e-95e1-4c17-9b08-7e9c40559915
+
 ## Usage Example
 
 ### 1 Initialization
