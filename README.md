@@ -51,7 +51,7 @@ imfx/
     │   └── impl/
     │       ├── includes.h
     │       └── shader.h
-    └── dxgi_backbuffer/            # Live desktop capture fed into a distortion shader
+    └── dxgi_backbuffer/            # Live desktop capture fed into a depth reconstruction shader
         ├── main.cxx
         └── impl/
             ├── includes.h
