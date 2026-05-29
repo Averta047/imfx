@@ -30,6 +30,7 @@ ImFXEffect::ImFXEffect()
     _BackendFlags = ImFXEffectBackendFlags_None;
     _BackendData  = nullptr;
     _TextureID    = ImTextureID_Invalid;
+    BackBufferSrv = nullptr;
 }
 
 //================================================================//

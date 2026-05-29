@@ -36,11 +36,12 @@ enum ImFXShaderSourceType
 // Read-only from user code.
 enum ImFXEffectBackendFlags_
 {
-    ImFXEffectBackendFlags_None         = 0,
-    ImFXEffectBackendFlags_Ready        = 1 << 0,   // Compiled & render target created
-    ImFXEffectBackendFlags_Incompatible = 1 << 1,   // Wrong shader lang for this backend
-    ImFXEffectBackendFlags_CompileError = 1 << 2,   // Shader compilation failed
-    ImFXEffectBackendFlags_SizeDirty    = 1 << 3,   // Size changed, RT needs rebuild
+    ImFXEffectBackendFlags_None              = 0,
+    ImFXEffectBackendFlags_Ready             = 1 << 0,   // Compiled & render target created
+    ImFXEffectBackendFlags_Incompatible      = 1 << 1,   // Wrong shader lang for this backend
+    ImFXEffectBackendFlags_CompileError      = 1 << 2,   // Shader compilation failed
+    ImFXEffectBackendFlags_SizeDirty         = 1 << 3,   // Size changed, RT needs rebuild
+    ImFXEffectBackendFlags_BackBufferBound   = 1 << 4,   // BackBufferSrv was bound this frame
 };
 typedef int ImFXEffectBackendFlags;
 
@@ -69,6 +70,24 @@ struct ImFXEffect
     float   Density;    // Noise density bias in [-0.5, 0.5] (default 0.0, no bias)
     ImVec4  ColorA;     // Primary / low colour  (RGBA)
     ImVec4  ColorB;     // Secondary / high colour (RGBA)
+
+    //------------------------------------------------------------------
+    // Back-buffer capture  (optional, set every frame before UpdateEffects)
+    //
+    // Assign an ID3D11ShaderResourceView* cast to void* that points at
+    // the scene rendered *behind* this effect (your swapchain resolve
+    // texture, a scene RT, etc.).  The backend binds it to t0 / s0
+    // so your pixel shader can declare:
+    //
+    //   Texture2D     BackBuffer : register(t0);
+    //   SamplerState  BackSampler : register(s0);
+    //
+    // Leave nullptr (default) if your shader does not need the scene.
+    // The pointer is NOT owned here - you manage its lifetime.
+    // It is consumed and cleared to nullptr after each UpdateEffects call
+    // so you must re-assign every frame you want it bound.
+    //------------------------------------------------------------------
+    void*   BackBufferSrv;  // ID3D11ShaderResourceView* (DX11), nullptr = unused
 
     //------------------------------------------------------------------
     // Output  (written by backend after each render)

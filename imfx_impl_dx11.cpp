@@ -160,6 +160,7 @@ struct ImFX_ImplDX11_Data
     ID3D11RasterizerState*      RsState;
     ID3D11DepthStencilState*    DsState;
     ID3D11BlendState*           BlendState;
+    ID3D11SamplerState*         BackBufferSampler;  // Linear-clamp; bound to s0 when BackBufferSrv is set
 
     static const DXGI_FORMAT    RTFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -411,6 +412,18 @@ bool ImFX_ImplDX11_Init(ImFX_ImplDX11_InitInfo* info)
         if (FAILED(bd->Device->CreateBlendState(&d, &bd->BlendState))) return false;
     }
 
+    // ---- Back-buffer sampler (linear clamp, bound to s0) --------------------
+    {
+        D3D11_SAMPLER_DESC d        = {};
+        d.Filter                    = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        d.AddressU                  = D3D11_TEXTURE_ADDRESS_CLAMP;
+        d.AddressV                  = D3D11_TEXTURE_ADDRESS_CLAMP;
+        d.AddressW                  = D3D11_TEXTURE_ADDRESS_CLAMP;
+        d.ComparisonFunc            = D3D11_COMPARISON_NEVER;
+        d.MaxLOD                    = D3D11_FLOAT32_MAX;
+        if (FAILED(bd->Device->CreateSamplerState(&d, &bd->BackBufferSampler))) return false;
+    }
+
     // ---- Default built-in effect ---------------------------------------------
     if (info->CreateDefaultEffect)
     {
@@ -434,10 +447,11 @@ void ImFX_ImplDX11_Shutdown()
         for (int i = 0; i < ctx->Effects.Size; i++)
             ImFX_ImplDX11_DestroyEffectData(ctx->Effects[i]);
 
-    if (bd->BlendState) { bd->BlendState->Release(); bd->BlendState = nullptr; }
-    if (bd->DsState)    { bd->DsState->Release();    bd->DsState    = nullptr; }
-    if (bd->RsState)    { bd->RsState->Release();    bd->RsState    = nullptr; }
-    if (bd->CommonVs)   { bd->CommonVs->Release();   bd->CommonVs   = nullptr; }
+    if (bd->BlendState)         { bd->BlendState->Release();         bd->BlendState         = nullptr; }
+    if (bd->DsState)            { bd->DsState->Release();            bd->DsState            = nullptr; }
+    if (bd->RsState)            { bd->RsState->Release();            bd->RsState            = nullptr; }
+    if (bd->CommonVs)           { bd->CommonVs->Release();           bd->CommonVs           = nullptr; }
+    if (bd->BackBufferSampler)  { bd->BackBufferSampler->Release();  bd->BackBufferSampler  = nullptr; }
 
     if (ctx)
         ctx->_BackendRendererUserData = nullptr;
@@ -557,8 +571,35 @@ void ImFX_ImplDX11_UpdateEffects(ImFXContext* ctx)
         dc->PSSetShader(ed->Ps, nullptr, 0);
         dc->PSSetConstantBuffers(0, 1, &ed->ParamCb);
 
+        // Back-buffer capture: bind caller-supplied SRV to t0 / s0 this frame.
+        // We bind regardless of whether it's null - binding null is a valid
+        // unbind and keeps the slot in a defined state.
+        {
+            ID3D11ShaderResourceView* pBbSrv = (ID3D11ShaderResourceView*)effect->BackBufferSrv;
+            dc->PSSetShaderResources(0, 1, &pBbSrv);
+            if (pBbSrv != nullptr)
+            {
+                dc->PSSetSamplers(0, 1, &bd->BackBufferSampler);
+                effect->_BackendFlags |= ImFXEffectBackendFlags_BackBufferBound;
+            }
+            else
+            {
+                effect->_BackendFlags &= ~ImFXEffectBackendFlags_BackBufferBound;
+            }
+        }
+
         // Draw fullscreen triangle - VS generates it from SV_VertexID
         dc->Draw(3, 0);
+
+        // Unbind t0 so the SRV doesn't linger as a PS input (DX11 debug layer
+        // will warn if the same texture is later bound as an RTV).
+        {
+            ID3D11ShaderResourceView* pNull = nullptr;
+            dc->PSSetShaderResources(0, 1, &pNull);
+        }
+
+        // Consume the pointer - user must re-assign next frame.
+        effect->BackBufferSrv = nullptr;
 
         // Resolve MSAA into the SRV-compatible texture
         if (ed->SampleCount > 1)
